@@ -152,6 +152,16 @@ function clipLineParallel(line) {
     let out1 = outcodeParallel(p1);
     
     // TODO: implement clipping here!
+    //Trivial Accept: Both endpoints are in view rectangle - Bitwise OR the outcodes
+    let out_accept = (out0 | out1);
+    //Trival Reject: Both endpoints lie outside the same edge - Bitwise AND the outcodes -> result not 0
+    let out_reject = (out0 & out1);
+    
+    if(out_reject > 0){
+        return null;
+    }
+
+    //Initializing Parametric Line Eq. Values + Formulas
     
     return result;
 }
@@ -163,9 +173,103 @@ function clipLinePerspective(line, z_min) {
     let p1 = Vector3(line.pt1.x, line.pt1.y, line.pt1.z);
     let out0 = outcodePerspective(p0, z_min);
     let out1 = outcodePerspective(p1, z_min);
+     
+    //Trivial Accept: Both endpoints are in view rectangle - Bitwise OR the outcodes
+    let out_accept = (out0 | out1);
+    //Trival Reject: Both endpoints lie outside the same edge - Bitwise AND the outcodes -> result not 0
+    let out_reject = (out0 & out1);
+
+    if(out_reject > 0){ //both endpoints lie outside same edge, therefore line is completely outside view volume
+        return result;
+    }
+
+    //Initializing Parametric Line Eq. Values + Formulas
+    let x0 = p0.x;
+    let y0 = p0.y;
+    let z0 = p0.z;
+    let x1 = p1.x;
+    let y1 = p1.y;
+    let z1 = p1.z;
+    //let near = clip.near;
+    let near = clip[4];
+    //let far = clip.far;
+    let far = clip[5];
+    let zmin = -near/far;
+    let t = 0;
+
+    let x = (1-t)*x0 + (t*x1);
+    let y = (1-t)*y0 + (t*y1);
+    let z = (1-t)*z0 + (t*z1);
+
+    //Intersection t-value formulas
+
+    left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
+    bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
+    near_t = (z0 - zmin)/-(z1-z0);
+    back_t = (-z0 - 1)/(z1-z0);
+    right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
+    top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
     
-    // TODO: implement clipping here!
+    //TODO: I'm not sure how the scaling works for this. Might need scaling matrix?
+
+    //CLIPPING OUTCODE0
+    if(out0 >= 32){  //LEFT
+        t = left_t;
+        x = (1-t)*x0 + (t*x1);
+        out0 = out0 - 32;
+    }else if(out0 >= 16){  //RIGHT
+        t = right_t;
+        x = (1-t)*x0 + (t*x1);
+        out0 = out0 - 16;
+    }
+    if(out0 >= 8){   //TOP
+        t = top_t;
+        y = (1-t)*y0 + (t*y1);
+        out0 = out0 - 8;
+    }else if(out0 >= 4){   //BOTTOM
+        t = bot_t;
+        y = (1-t)*y0 + (t*y1);
+        out0 = out0 - 4;
+    }
+    if(out0 >= 2){   //FAR
+        t = back_t;
+        z = (1-t)*z0 + (t*z1);
+        out0 = out0 - 2;
+    }else if(out >= 1){    //NEAR
+        t = near_t;
+        z = (1-t)*z0 + (t*z1);
+        out0 = out0 - 1;
+    }
+    //CLIPPING OUTCODE1
+    if(out1 >= 32){  //LEFT
+        t = left_t;
+        x = (1-t)*x0 + (t*x1);
+        out1 = out1 - 32;
+    }else if(out1 >= 16){  //RIGHT
+        t = right_t;
+        x = (1-t)*x0 + (t*x1);
+        out1 = out1 - 16;
+    }
+    if(out1 >= 8){   //TOP
+        t = top_t;
+        y = (1-t)*y0 + (t*y1);
+        out1 = out1 - 8;
+    }else if(out1 >= 4){   //BOTTOM
+        t = bot_t;
+        y = (1-t)*y0 + (t*y1);
+        out1 = out1 - 4;
+    }
+    if(out1 >= 2){   //FAR
+        t = back_t;
+        z = (1-t)*z0 + (t*z1);
+        out1 = out1 - 2;
+    }else if(out >= 1){    //NEAR
+        t = near_t;
+        z = (1-t)*z0 + (t*z1);
+        out1 = out1 - 1;
+    }
     
+    //TODO: return result but idk what result is. Is it a vertex? idk.
     return result;
 }
 
