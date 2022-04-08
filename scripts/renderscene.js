@@ -55,6 +55,37 @@ function init() {
                     [4, 9]
                 ],
                 matrix: new Matrix(4, 4)
+            },
+            {
+                type: 'cube',
+                "center": [10, 30, 30],
+                "width": 10,
+                "height": 10,
+                "depth": 10
+            },
+            {
+                type: 'cylinder',
+                "center": [-10, -10, 20],
+                "width": 10,
+                "height": 30,
+                "depth": 10,
+                "radius": 5,
+            },
+            {
+                type: 'cone',
+                "center": [-10, -10, 20],
+                "width": 10,
+                "height": 25,
+                "depth": 10,
+                "radius": 5,
+            },
+            {
+                type: 'sphere',
+                "center": [0, 30, 30],
+                "width": 5,
+                "height": 5,
+                "depth": 5,
+                "radius": 5,
             }
         ]
     };
@@ -89,6 +120,18 @@ function drawScene() {
     
     // TODO: implement drawing here!
     // For each model, for each edge
+    let nPer = mat4x4Perspective(scene.view.prp, scene.view.srp, scene.view.vup, scene.view.clip);
+    for(let count = 0; count < scene.models.length; count++){
+        if(scene.models[i].type == 'cube'){
+
+        } else if(scene.models[i].type == 'cylinder'){
+            scene.models[i] = 
+        } else if(scene.models[i].type == 'cone'){
+
+        } else if(scene.models[i].type == 'sphere'){
+
+        }
+    }
     //  * transform to canonical view volume
     //  * clip in 3D
     //  * project to 2D
@@ -213,18 +256,25 @@ function clipLinePerspective(line, z_min) {
     //TODO: I'm not sure how the scaling works for this. Might need scaling matrix?
 
     //CLIPPING OUTCODE0
+    //BOUNDS: LEFT = z, RIGHT = -z, BOTTOM y = z, TOP = -z, FAR z = 1, NEAR z = z_min
     if(out0 >= 32){  //LEFT
         t = left_t;
         x = (1-t)*x0 + (t*x1);
+        y = (1-t)*y0 + (t*y1);
+        z = (1-t)*z0 + (t*z1);
         out0 = out0 - 32;
     }else if(out0 >= 16){  //RIGHT
         t = right_t;
         x = (1-t)*x0 + (t*x1);
+        y = (1-t)*y0 + (t*y1);
+        z = (1-t)*z0 + (t*z1);
         out0 = out0 - 16;
     }
     if(out0 >= 8){   //TOP
         t = top_t;
+        x = (1-t)*x0 + (t*x1);
         y = (1-t)*y0 + (t*y1);
+        z = (1-t)*z0 + (t*z1);
         out0 = out0 - 8;
     }else if(out0 >= 4){   //BOTTOM
         t = bot_t;
@@ -233,43 +283,64 @@ function clipLinePerspective(line, z_min) {
     }
     if(out0 >= 2){   //FAR
         t = back_t;
+        x = (1-t)*x0 + (t*x1);
+        y = (1-t)*y0 + (t*y1);
         z = (1-t)*z0 + (t*z1);
         out0 = out0 - 2;
     }else if(out >= 1){    //NEAR
         t = near_t;
+        x = (1-t)*x0 + (t*x1);
+        y = (1-t)*y0 + (t*y1);
         z = (1-t)*z0 + (t*z1);
         out0 = out0 - 1;
     }
+    p0 = Vector3(x,y,z);    //create new clipped vector point
+
     //CLIPPING OUTCODE1
     if(out1 >= 32){  //LEFT
         t = left_t;
         x = (1-t)*x0 + (t*x1);
+        y = (1-t)*y0 + (t*y1);
+        z = (1-t)*z0 + (t*z1);
         out1 = out1 - 32;
     }else if(out1 >= 16){  //RIGHT
         t = right_t;
         x = (1-t)*x0 + (t*x1);
+        y = (1-t)*y0 + (t*y1);
+        z = (1-t)*z0 + (t*z1);
         out1 = out1 - 16;
     }
     if(out1 >= 8){   //TOP
         t = top_t;
+        x = (1-t)*x0 + (t*x1);
         y = (1-t)*y0 + (t*y1);
+        z = (1-t)*z0 + (t*z1);
         out1 = out1 - 8;
     }else if(out1 >= 4){   //BOTTOM
         t = bot_t;
+        x = (1-t)*x0 + (t*x1);
         y = (1-t)*y0 + (t*y1);
+        z = (1-t)*z0 + (t*z1);
         out1 = out1 - 4;
     }
     if(out1 >= 2){   //FAR
         t = back_t;
+        x = (1-t)*x0 + (t*x1);
+        y = (1-t)*y0 + (t*y1);
         z = (1-t)*z0 + (t*z1);
         out1 = out1 - 2;
     }else if(out >= 1){    //NEAR
         t = near_t;
+        x = (1-t)*x0 + (t*x1);
+        y = (1-t)*y0 + (t*y1);
         z = (1-t)*z0 + (t*z1);
         out1 = out1 - 1;
     }
     
-    //TODO: return result but idk what result is. Is it a vertex? idk.
+    p1 = Vector3(x,y,z);    //create new clipped vector point
+    line.pt0 = p0;
+    line.pt1 = p1;
+    result = line;
     return result;
 }
 
@@ -346,4 +417,137 @@ function drawLine(x1, y1, x2, y2) {
     ctx.fillStyle = '#FF0000';
     ctx.fillRect(x1 - 2, y1 - 2, 4, 4);
     ctx.fillRect(x2 - 2, y2 - 2, 4, 4);
+}
+
+function drawCube(model){
+    const cube = Object.create(generic);
+    let vertices = [];
+    let center = model.center;
+    let height = model.height;
+    let width = model.width;
+    let depth = model.depth;
+
+    cube.vertices.push(Vector4(center-(width/2), center+(height/2), center-(depth/2)));  //front top left
+    cube.vertices.push(Vector4(center+(width/2), center+(height/2), center-(depth/2)));  //front top right
+    cube.vertices.push(Vector4(center-(width/2), center-(height/2), center-(depth/2)));  //front bottom left
+    cube.vertices.push(Vector4(center+(width/2), center-(height/2), center-(depth/2)));  //front bottom right
+
+    cube.vertices.push(Vector4(center-(width/2), center+(height/2), center+(depth/2)));  //front top left
+    cube.vertices.push(Vector4(center+(width/2), center+(height/2), center+(depth/2)));  //front top right
+    cube.vertices.push(Vector4(center-(width/2), center-(height/2), center+(depth/2)));  //front bottom left
+    cube.vertices.push(Vector4(center+(width/2), center-(height/2), center+(depth/2)));  //front bottom right
+
+    //need edges
+}
+
+function drawCone(model){
+    const cone = Object.create(generic);
+    let vertices = [];
+    let edges = [];
+    let sides = model.sides;
+    let center = model.center;
+    let height = model.height;
+    let width = model.width;
+    let depth = model.depth;
+
+    cone.vertices.push(center, center+(height/2), center)
+    for(let i = 0; i < sides; i++){     //create vertices
+        //old point x and z
+        let radian = degreeToRadian((360/sides)*i);
+        let x0 = center[0] + radius*Math.cos(radian);
+        let z0 = center[2] + radius*Math.sin(radian);
+
+        //new point x and z
+        radian = degreeToRadian((360/sides)*(i+1));
+        let x1 = center[0] + radius*Math.cos(radian);
+        let z1 = center[2] + radius*Math.sin(radian);
+        
+        //creating points
+        let p0 = Vector4(x0, center[1]-(height/2), z0, 1);
+        let p1 = Vector4(z0, center[1]-(height/2), z1, 1);
+        cone.vertices.push(p0);
+        cone.vertices.push(p1);
+    }
+
+    for(let i = 0; i <= model.vertices.length; i++){
+        let circle = [i,i+1];
+        let cone = [0, i];
+
+        cone.edges.push(circle);
+        cone.edges.push(cone);
+    }
+
+    return cone;
+}
+
+function degreeToRadian(degrees){
+    return degree*Math.PI/180;
+}
+
+function drawCylinder(model){
+    const cylinder = Object.create(generic);
+    let vertices = [];
+    let edges = [];
+    let sides = model.sides;
+    let center = model.center;
+    let height = model.height;
+    let width = model.width;
+    let depth = model.depth;
+
+    for(let i = 0; i < sides; i++){
+        //point x and z
+        let radian = degreeToRadian((360/sides)*i);
+        let x0 = center[0] + radius*Math.cos(radian);
+        let z0 = center[2] + radius*Math.sin(radian);
+        
+        //creating points
+        let p0 = Vector4(x0, center[1]-(height/2), z0, 1);
+        let p1 = Vector4(z0, center[1]+(height/2), z1, 1);
+        cone.vertices.push(p0);
+        cone.vertices.push(p1);
+
+        cylinder.vertices.push(p0);
+        cylinder.vertices.push(p1);
+    }
+
+    for(let i = 0; i < vertices.length; i++){
+        let circleEdges = [i, (i+1) % cone.vertices.length];
+        if(i%2 == 0){
+            let linesArray = [0, i+1];
+        }
+        model.edges.push(circleEdge);
+        model.edges.push(linesArray);
+    }
+    return cone;
+}
+
+function drawSphere(model){
+    //IDEA: Draw a sphere by first drawing a circle and then slowly drawing more circles rotated along the z axis
+    const sphere = Object.create(generic);
+    let vertices = [];
+    let edges = [];
+    let sides = model.sides;
+    let center = model.center;
+    let height = model.height;
+    let width = model.width;
+    let depth = model.depth;
+
+    
+    for(let i = 0; i < sides; i++){     //create vertices
+        //old point x and z
+        let radian = degreeToRadian((360/sides)*i);
+        let x0 = center[0] + radius*Math.cos(radian);
+        let z0 = center[2] + radius*Math.sin(radian);
+
+        //new point x and z
+        radian = degreeToRadian((360/sides)*(i+1));
+        let x1 = center[0] + radius*Math.cos(radian);
+        let z1 = center[2] + radius*Math.sin(radian);
+        
+        //creating points
+        let p0 = Vector4(x0, center[1], z0, 1);
+        let p1 = Vector4(z0, center[1], z1, 1);
+        cone.vertices.push(p0);
+        cone.vertices.push(p1);
+    }
 }
