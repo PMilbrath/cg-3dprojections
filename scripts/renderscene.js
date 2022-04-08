@@ -123,14 +123,14 @@ function drawScene() {
     let nPer = mat4x4Perspective(scene.view.prp, scene.view.srp, scene.view.vup, scene.view.clip);
     for(let count = 0; count < scene.models.length; count++){
         if(scene.models[i].type == 'cube'){
-
+            scene.models[i] = drawCube(model[i]);
         } else if(scene.models[i].type == 'cylinder'){
-            scene.models[i] = 
+            scene.models[i] = drawCylinder(model[i]);
         } else if(scene.models[i].type == 'cone'){
-
+            scene.models[i] = drawCone(model[i]);
         } else if(scene.models[i].type == 'sphere'){
-
-        }
+            scene.models[i] = drawSphere(model[i]);
+        } 
     }
     //  * transform to canonical view volume
     //  * clip in 3D
@@ -422,6 +422,7 @@ function drawLine(x1, y1, x2, y2) {
 function drawCube(model){
     const cube = Object.create(generic);
     let vertices = [];
+    let edges = [];
     let center = model.center;
     let height = model.height;
     let width = model.width;
@@ -437,7 +438,13 @@ function drawCube(model){
     cube.vertices.push(Vector4(center-(width/2), center-(height/2), center+(depth/2)));  //front bottom left
     cube.vertices.push(Vector4(center+(width/2), center-(height/2), center+(depth/2)));  //front bottom right
 
-    //need edges
+    cube.edges.push([0, 1, 2, 3, 0]);
+    cube.edges.push([4, 5, 6, 7, 4]);
+    cube.edges.push([0, 4]);
+    cube.edges.push([1, 5]);
+    cube.edges.push([2, 6]);
+    cube.edges.push([3, 7]);
+    return cube;
 }
 
 function drawCone(model){
@@ -522,7 +529,7 @@ function drawCylinder(model){
 }
 
 function drawSphere(model){
-    //IDEA: Draw a sphere by first drawing a circle and then slowly drawing more circles rotated along the z axis
+    //IDEA: Draw a sphere by first drawing a circle and then drawing more circles rotated along the z axis
     const sphere = Object.create(generic);
     let vertices = [];
     let edges = [];
@@ -532,22 +539,24 @@ function drawSphere(model){
     let width = model.width;
     let depth = model.depth;
 
-    
-    for(let i = 0; i < sides; i++){     //create vertices
-        //old point x and z
-        let radian = degreeToRadian((360/sides)*i);
-        let x0 = center[0] + radius*Math.cos(radian);
-        let z0 = center[2] + radius*Math.sin(radian);
 
-        //new point x and z
-        radian = degreeToRadian((360/sides)*(i+1));
-        let x1 = center[0] + radius*Math.cos(radian);
-        let z1 = center[2] + radius*Math.sin(radian);
-        
-        //creating points
-        let p0 = Vector4(x0, center[1], z0, 1);
-        let p1 = Vector4(z0, center[1], z1, 1);
-        cone.vertices.push(p0);
-        cone.vertices.push(p1);
+    for(let i = 0; i < 180; i++){
+        for(let i = 0; i < sides; i++){     //create vertices
+            //old point x and z
+            let radian = degreeToRadian((360/sides)*i);
+            let x0 = center[0] + radius*Math.cos(radian);
+            let z0 = center[2] + radius*Math.sin(radian);
+    
+            //new point x and z
+            radian = degreeToRadian((360/sides)*(i+1));
+            let x1 = center[0] + radius*Math.cos(radian);
+            let z1 = center[2] + radius*Math.sin(radian);
+            
+            //creating points
+            let p0 = Vector4(x0, center[1], z0, 1);
+            let p1 = Vector4(z0, center[1], z1, 1);
+            cone.vertices.push(p0);
+            cone.vertices.push(p1);
+        }
     }
 }
