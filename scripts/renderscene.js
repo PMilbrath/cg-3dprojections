@@ -61,7 +61,11 @@ function init() {
                 "center": [10, 30, 30],
                 "width": 10,
                 "height": 10,
-                "depth": 10
+                "depth": 10,
+                "animation": {
+                    "axis": "y",
+                    "rps": 0.5
+                }
             },
             {
                 type: 'cylinder',
@@ -70,6 +74,11 @@ function init() {
                 "height": 30,
                 "depth": 10,
                 "radius": 5,
+                "sides": 12,
+                "animation": {
+                    "axis": "y",
+                    "rps": 0.5
+                }
             },
             {
                 type: 'cone',
@@ -78,6 +87,11 @@ function init() {
                 "height": 25,
                 "depth": 10,
                 "radius": 5,
+                "sides": 12,
+                "animation": {
+                    "axis": "y",
+                    "rps": 0.5
+                }
             },
             {
                 type: 'sphere',
@@ -86,6 +100,11 @@ function init() {
                 "height": 5,
                 "depth": 5,
                 "radius": 5,
+                "sides": 12,
+                "animation": {
+                    "axis": "y",
+                    "rps": 0.5
+                }
             }
         ]
     };
@@ -120,8 +139,7 @@ function drawScene() {
     
     // TODO: implement drawing here!
     // For each model, for each edge
-    let nPer = mat4x4Perspective(scene.view.prp, scene.view.srp, scene.view.vup, scene.view.clip);
-    for(let count = 0; count < scene.models.length; count++){
+    for(let count = 0; count < scene.models.length; count++){       //in case there's multiple models for each scene
         if(scene.models[i].type == 'cube'){
             scene.models[i] = drawCube(model[i]);
         } else if(scene.models[i].type == 'cylinder'){
@@ -132,10 +150,40 @@ function drawScene() {
             scene.models[i] = drawSphere(model[i]);
         } 
     }
+
+    //Initializing Canonical View Calculations
+    let nPer;
+    let mPer; 
+    if(scene.view == perspective){
+        nPer = mat4x4Perspective(scene.view.prp, scene.view.srp, scene.view.vup, scene.view.clip);
+        mPer = mat4x4MPer();
+    } else{
+        nPer = mat4x4Parallel(scene.view.prp, scene.view.srp, scene.view.vup, scene.view.clip);
+        mPer = mat4x4MPar();
+    }
+
     //  * transform to canonical view volume
-    //  * clip in 3D
-    //  * project to 2D
-    //  * draw line
+    for(let count = 0; i < scene.models.length; i++){
+        for(let edge_count = 0; edge_count < model[i].edges.length; edge_count){
+            //get two edges
+            let p0 = model[i].edges[i];
+            let p1 = model[i].edges[i+1];
+
+            //create a line
+            let line = makeLine(p0, p1);
+
+            //  * clip in 3D
+            clipLinePerspective(line);
+            
+            //  * project to 2D
+
+            //  * draw line
+        }
+    }
+}
+
+function makeLine(p0, p1){
+    return {p0 : p0, p1 : p1};
 }
 
 // Get outcode for vertex (parallel view volume)
@@ -421,8 +469,6 @@ function drawLine(x1, y1, x2, y2) {
 
 function drawCube(model){
     const cube = Object.create(generic);
-    let vertices = [];
-    let edges = [];
     let center = model.center;
     let height = model.height;
     let width = model.width;
@@ -449,8 +495,6 @@ function drawCube(model){
 
 function drawCone(model){
     const cone = Object.create(generic);
-    let vertices = [];
-    let edges = [];
     let sides = model.sides;
     let center = model.center;
     let height = model.height;
@@ -459,12 +503,12 @@ function drawCone(model){
 
     cone.vertices.push(center, center+(height/2), center)
     for(let i = 0; i < sides; i++){     //create vertices
-        //old point x and z
+        //create coordinate for the original point in regards to x,z
         let radian = degreeToRadian((360/sides)*i);
         let x0 = center[0] + radius*Math.cos(radian);
         let z0 = center[2] + radius*Math.sin(radian);
 
-        //new point x and z
+        //create coordinate for the next point in regards to x,z
         radian = degreeToRadian((360/sides)*(i+1));
         let x1 = center[0] + radius*Math.cos(radian);
         let z1 = center[2] + radius*Math.sin(radian);
@@ -483,7 +527,6 @@ function drawCone(model){
         cone.edges.push(circle);
         cone.edges.push(cone);
     }
-
     return cone;
 }
 
@@ -504,10 +547,11 @@ function drawCylinder(model){
     for(let i = 0; i < sides; i++){
         //point x and z
         let radian = degreeToRadian((360/sides)*i);
+        //create coordinates x,z
         let x0 = center[0] + radius*Math.cos(radian);
         let z0 = center[2] + radius*Math.sin(radian);
         
-        //creating points
+        //creating points, top and bottom
         let p0 = Vector4(x0, center[1]-(height/2), z0, 1);
         let p1 = Vector4(z0, center[1]+(height/2), z1, 1);
         cone.vertices.push(p0);
@@ -531,8 +575,6 @@ function drawCylinder(model){
 function drawSphere(model){
     //IDEA: Draw a sphere by first drawing a circle and then drawing more circles rotated along the z axis
     const sphere = Object.create(generic);
-    let vertices = [];
-    let edges = [];
     let sides = model.sides;
     let center = model.center;
     let height = model.height;
