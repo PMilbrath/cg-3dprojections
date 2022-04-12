@@ -5,8 +5,10 @@ function mat4x4Parallel(prp, srp, vup, clip) {
     Mat4x4Translate(transPrP,-prp.x,-prp.y,-prp.z);
     // 2. rotate VRC such that (u,v,n) align with (x,y,z)
     let rotVRC = new Matrix(4,4);
-    let n = (prp.subtract(srp)).normalize();
-    let u = (vup.cross(n)).normalize();
+    let n = prp.subtract(srp);
+    n.normalize();
+    let u = vup.cross(n);
+    u.normalize();
     let v = n.cross(u);
     rotVRC.values = [[u.x,u.y,u.z,0],
                      [v.x,v.y,v.z,0],
@@ -33,10 +35,8 @@ function mat4x4Parallel(prp, srp, vup, clip) {
     let sperZ = 1/(clip[5]);
     Mat4x4Scale(scaleMat,sperX,sperY,sperZ);
 
-    //MPar
-    let mPar=mat4x4MPar();
     
-     let transform = Matrix.multiply([mPar,scaleMat,transOrg,shearMat,rotVRC,transPrP]);
+     let transform = Matrix.multiply([scaleMat,transOrg,shearMat,rotVRC,transPrP]);
      return transform;
 }
 
@@ -49,8 +49,10 @@ function mat4x4Perspective(prp, srp, vup, clip) {
 
     // 2. rotate VRC such that (u,v,n) align with (x,y,z)
     let rotVRC = new Matrix(4,4);
-    let n = (prp.subtract(srp)).normalize();
-    let u = (vup.cross(n)).normalize();
+    let n = prp.subtract(srp);
+    n.normalize();
+    let u = vup.cross(n);
+    u.normalize();
     let v = n.cross(u);
     rotVRC.values = [[u.x,u.y,u.z,0],
                      [v.x,v.y,v.z,0],
@@ -73,10 +75,7 @@ function mat4x4Perspective(prp, srp, vup, clip) {
     let sperZ = 1/(clip[5]);
     Mat4x4Scale(scaleMat,sperX,sperY,sperZ);
 
-    //MPer
-    let mPer = mat4x4MPer(); 
-
-    let transform = Matrix.multiply([mPer,scaleMat,shearMat,rotVRC,transPrP]);
+    let transform = Matrix.multiply([scaleMat,shearMat,rotVRC,transPrP]);
     return transform;
 }
 
