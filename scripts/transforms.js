@@ -7,12 +7,12 @@ function mat4x4Parallel(prp, srp, vup, clip) {
     let rotVRC = new Matrix(4,4);
     let n = prp.subtract(srp);
     n.normalize();
-    console.log(n);
+    //console.log(n);
     let u = vup.cross(n);
     u.normalize();
-    console.log(u);
+    //console.log(u);
     let v = n.cross(u);
-    console.log(v);
+    //console.log(v);
     rotVRC.values = [[u.x,u.y,u.z,0],
                      [v.x,v.y,v.z,0],
                      [n.x,n.y,n.z,0],
@@ -162,7 +162,6 @@ function Mat4x4RotateY(mat4x4, theta) {
                      [0, 1, 0, 0],
                      [-Math.sin(theta), 0, Math.cos(theta), 0],
                      [0, 0, 0, 1]];
-    return Vector4(1,1,1,1,);
 }
 
 // set values of existing 4x4 matrix to the rotate about z-axis matrix

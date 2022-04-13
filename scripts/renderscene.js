@@ -188,7 +188,7 @@ function drawScene() {
         mPer = mat4x4MPar();
     }
 
-    // console.log(nPer);
+    console.log(nPer);
 
     for(let i = 0; i < scene.models.length; i++){
         verts=new Array(0);
@@ -210,11 +210,13 @@ function drawScene() {
                     pt0: p0, 
                     pt1: p1
                 };
-                line.pt0 = p0;
-                line.pt1 = p1;
                 // console.log(line);
                 //  * clip in 3D
-                results=clipLinePerspective(line,scene.view.clip[4]/scene.view.clip[5]);
+                if(scene.models[i].type=='perspective') {
+                    results=clipLinePerspective(line,scene.view.clip[4]/scene.view.clip[5]);
+                } else {
+                    results=clipLineParallel(line);
+                }
                 // console.log(results);
                 if(results != null) {
                     clipped_vertices.push(results.pt0);               
@@ -227,7 +229,7 @@ function drawScene() {
             clipped_vertices[j].scale(1/clipped_vertices[j].w);
             clipped_vertices[j] = Matrix.multiply([v,clipped_vertices[j]]);
         }
-        // console.log(clipped_vertices);
+        console.log(clipped_vertices);
         for(let line_pt = 0; line_pt<clipped_vertices.length; line_pt=line_pt+2){
         
             // Select 2 Points that are connected
@@ -324,74 +326,102 @@ function clipLineParallel(line) {
     let y = (1-t)*y0 + (t*y1);
     let z = (1-t)*z0 + (t*z1);
 
+    let out;
+    let select;
+
     //Intersection t-value formulas
     /**
      * left     x = 1,  right: x = 1
      * bottom:  y = -1, Top:   x = 1
      * near:    z = 0,  back:  z = -1
      */
-    // left_t = (-x0 + -1)/(-x0+x1);
-    // bot_t = (y0 + -1)/(-y0+y1);
-    // near_t = (z0 - 0)/-(z1-z0);
-    // back_t = (-z0 - 1)/(z1-z0);
-    // right_t = (x0 + 1)/(-x0+x1);
-    // top_t = (y0 + 1)/(-y0+y1);
+    left_t = (-x0 + -1)/(-x0+x1);
+    bot_t = (-y0 + -1)/(-y0+y1);
+    near_t = (-z0 - 0)/-(z1-z0);
+    back_t = (-z0 - 1)/(z1-z0);
+    right_t = (-x0 + 1)/(-x0+x1);
+    top_t = (-y0 + 1)/(-y0+y1);
 
-    left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
+    /*
+    left_t = (-1 - x0 )/(x1-x0);
     bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
     near_t = (z0 - zmin)/-(z1-z0);
     back_t = (-z0 - 1)/(z1-z0);
     right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
     top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
-
-    //CLIPPING OUTCODE0
+    */
+    //CLIPPING OUTCODE
     //BOUNDS: LEFT = z, RIGHT = -z, BOTTOM y = z, TOP = -z, FAR z = 1, NEAR z = z_min
-    if(out0 >= 32){  //LEFT
-        t = left_t;
-        x = 1;
-        // x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 32;
-    }else if(out0 >= 16){  //RIGHT
-        t = right_t;
-        x = -1;
-        // x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 16;
+    while(true) {
+        out_reject=(out0 & out1);
+        out_accept=(out0|out1);
+        if(out_reject > 0){ //both endpoints lie outside same edge, therefore line is completely outside view volume
+            return result;
+        } else if(out_accept == 0) {
+            return line;
+        }
+
+        if(out0 != 0) {
+            select=0;
+            out = out0;
+        } else {
+            select=1;
+            out = out1;
+        }
+
+    //CLIPPING OUTCODE
+        if(out >= 32){  //LEFT
+            t = left_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 32;
+        }else if(out >= 16){  //RIGHT
+            t = right_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 16;
+        }else if(out >= 8){   //TOP
+            t = top_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 8;
+        }else if(out >= 4){   //BOTTOM
+            t = bot_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 4;
+        } else if(out >= 2){   //FAR
+            t = back_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 2;
+        } else if(out >= 1){    //NEAR
+            t = near_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 1;
+        }
+
+        if(select ==0) {
+        line.pt0 = Vector4(x,y,z,1);    //create new clipped vector point
+        out0 = out;
+        x0 = x;
+        y0 = y;
+        z0 = z;
+        } else {
+        line.pt1 = Vector4(x,y,z,1);    //create new clipped vector point
+        x1 = x;
+        y1 = y;
+        z1 = z;
+        out1 = out;
+        }
     }
-    if(out0 >= 8){   //TOP
-        t = top_t;
-        y = 1;
-        x = (1-t)*x0 + (t*x1);
-        // y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 8;
-    }else if(out0 >= 4){   //BOTTOM
-        t = bot_t;
-        y = -1;
-        x = (1-t)*x0 + (t*x1);
-        // y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 4;
-    }
-    if(out0 >= 2){   //FAR
-        t = back_t;
-        z = -1;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        // z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 2;
-    }else if(out0 >= 1){    //NEAR
-        t = near_t;
-        z = 0;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        // z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 1;
-    }
-    return result;
 }
 
 // Clip line - should either return a new line (with two endpoints inside view volume) or null (if line is completely outside view volume)
@@ -447,6 +477,8 @@ function clipLinePerspective(line, z_min) {
     //CLIPPING OUTCODE0
     //BOUNDS: LEFT = z, RIGHT = -z, BOTTOM y = z, TOP = -z, FAR z = 1, NEAR z = z_min
     while(true) {
+        out_reject=(out0 & out1);
+        out_accept=(out0|out1);
         if(out_reject > 0){ //both endpoints lie outside same edge, therefore line is completely outside view volume
             return result;
         } else if(out_accept == 0) {
