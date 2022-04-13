@@ -69,6 +69,8 @@ function init() {
 
 // Animation loop - repeatedly calls rendering code
 function animate(timestamp) {
+    while(true){
+        onkeydown(keyCode);
     // step 1: calculate time (time since start)
     let time = timestamp - start_time;
     
@@ -80,7 +82,9 @@ function animate(timestamp) {
 
     // step 4: request next animation frame (recursively calling same function)
     // (may want to leave commented out while debugging initially)
-    // window.requestAnimationFrame(animate);
+    // window.requestAnimationFrame(animate(time));
+    }
+    
 }
 
 // Main drawing code - use information contained in variable `scene`
@@ -110,10 +114,10 @@ function outcodeParallel(vertex) {
     else if (vertex.y > (1.0 + FLOAT_EPSILON)) {
         outcode += TOP;
     }
-    if (vertex.x < (-1.0 - FLOAT_EPSILON)) {
+    if (vertex.z < (-1.0 - FLOAT_EPSILON)) {
         outcode += FAR;
     }
-    else if (vertex.x > (0.0 + FLOAT_EPSILON)) {
+    else if (vertex.z > (0.0 + FLOAT_EPSILON)) {
         outcode += NEAR;
     }
     return outcode;
