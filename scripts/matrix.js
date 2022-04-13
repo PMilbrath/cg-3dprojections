@@ -33,7 +33,7 @@ class Matrix {
         }
         // not valid
         else {
-            console.log("could not set values for " + this.rows + "x" + this.columns + " maxtrix");
+            console.log("could not set values for " + this.rows + "x" + this.columns + " matrix");
         }
     }
 
