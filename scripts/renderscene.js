@@ -130,13 +130,15 @@ function animate(timestamp) {
 
     // step 4: request next animation frame (recursively calling same function)
     // (may want to leave commented out while debugging initially)
-    const myTimeout = setTimeout(window.requestAnimationFrame(animate), 5000);
-    
+    const myTimeout = setTimeout(() => {
+        window.requestAnimationFrame(animate);
+    }, 5000);
 }
 
 // Main drawing code - use information contained in variable `scene`
 function drawScene() {
-    //console.log(scene);
+    ctx.clearRect(0, 0, view.width, view.height);
+    console.log(scene);
     
     // TODO: implement drawing here!
     // For each model, for each edge
@@ -180,15 +182,15 @@ function drawScene() {
         mPer = mat4x4MPar();
     }
 
-    //console.log(nPer);
+    console.log(nPer);
 
     for(let i = 0; i < scene.models.length; i++){
-        verts = scene.models[i].vertices;
+        verts=new Array(0);
         clipped_vertices = new Array(0);
         clippedVerts = new Array(0);
         for(let vert_count = 0; vert_count < scene.models[i].vertices.length; vert_count++){
             //  * transform to canonical view volume
-            verts[vert_count] = Matrix.multiply([nPer,verts[vert_count]]);
+            verts.push(Matrix.multiply([nPer,scene.models[i].vertices[vert_count]]));
         }
         //console.log(verts);
         //console.log(clipped_vertices);
@@ -217,7 +219,7 @@ function drawScene() {
             clipped_vertices[j].scale(1/clipped_vertices[j].w);
             clipped_vertices[j] = Matrix.multiply([v,clipped_vertices[j]]);
         }
-        //console.log(clipped_vertices);
+        console.log(clipped_vertices);
         for(let line_pt = 0; line_pt<clipped_vertices.length; line_pt=line_pt+2){
         
             // Select 2 Points that are connected
@@ -312,6 +314,8 @@ function clipLinePerspective(line, z_min) {
     let out0 = outcodePerspective(p0, z_min);
     let out1 = outcodePerspective(p1, z_min);
      
+    let out;
+    let select;
     //Trivial Accept: Both endpoints are in view rectangle - Bitwise OR the outcodes
     let out_accept = (out0 | out1);
     //Trival Reject: Both endpoints lie outside the same edge - Bitwise AND the outcodes -> result not 0
@@ -341,6 +345,7 @@ function clipLinePerspective(line, z_min) {
     let y = (1-t)*y0 + (t*y1);
     let z = (1-t)*z0 + (t*z1);
 
+
     //Intersection t-value formulasl
 
     left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
@@ -354,97 +359,84 @@ function clipLinePerspective(line, z_min) {
 
     //CLIPPING OUTCODE0
     //BOUNDS: LEFT = z, RIGHT = -z, BOTTOM y = z, TOP = -z, FAR z = 1, NEAR z = z_min
-    if(out0 >= 32){  //LEFT
-        t = left_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 32;
-    }else if(out0 >= 16){  //RIGHT
-        t = right_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 16;
-    }
-    if(out0 >= 8){   //TOP
-        t = top_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 8;
-    }else if(out0 >= 4){   //BOTTOM
-        t = bot_t;
-        y = (1-t)*y0 + (t*y1);
-        out0 = out0 - 4;
-    }
-    if(out0 >= 2){   //FAR
-        t = back_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 2;
-    }else if(out0 >= 1){    //NEAR
-        t = near_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 1;
-    }
-    p0 = Vector4(x,y,z,1);    //create new clipped vector point
+    while(true) {
+        if(out_reject > 0){ //both endpoints lie outside same edge, therefore line is completely outside view volume
+            return result;
+        } else if(out_accept == 0) {
+            return line;
+        }
 
-    //CLIPPING OUTCODE1
-    if(out1 >= 32){  //LEFT
-        t = left_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 32;
-    }else if(out1 >= 16){  //RIGHT
-        t = right_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 16;
+        if(out0 != 0) {
+            select=0;
+            out = out0;
+        } else {
+            select=1;
+            out = out1;
+        }
+
+    //CLIPPING OUTCODE
+        if(out >= 32){  //LEFT
+            t = left_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 32;
+        }else if(out >= 16){  //RIGHT
+            t = right_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 16;
+        }else if(out >= 8){   //TOP
+            t = top_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 8;
+        }else if(out >= 4){   //BOTTOM
+            t = bot_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 4;
+        } else if(out >= 2){   //FAR
+            t = back_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 2;
+        } else if(out >= 1){    //NEAR
+            t = near_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 1;
+        }
+
+        if(select ==0) {
+        line.pt0 = Vector4(x,y,z,1);    //create new clipped vector point
+        out0 = out;
+        x0 = x;
+        y0 = y;
+        z0 = z;
+        } else {
+        line.pt1 = Vector4(x,y,z,1);    //create new clipped vector point
+        x1 = x;
+        y1 = y;
+        z1 = z;
+        out1 = out;
+        }
     }
-    if(out1 >= 8){   //TOP
-        t = top_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 8;
-    }else if(out1 >= 4){   //BOTTOM
-        t = bot_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 4;
-    }
-    if(out1 >= 2){   //FAR
-        t = back_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 2;
-    }else if(out1 >= 1){    //NEAR
-        t = near_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 1;
-    }
-    
-    p1 = Vector4(x,y,z,1);    //create new clipped vector point
-    line.pt0 = p0;
-    line.pt1 = p1;
-    result = line;
-    return result;
 }
 
 // Called when user presses a key on the keyboard down 
 function onKeyDown(event) {
-    let n = Vector3(1,0,0);
-    let u = Vector3(0,1,0);
+    let n = scene.view.prp.subtract(scene.view.srp);
+    n.normalize();
+    let u = scene.view.vup.cross(n);
+    u.normalize();
+    n.scale(.1);
+    u.scale(.1);
 
     switch (event.keyCode) {    
         case 37: // LEFT Arrow
@@ -461,7 +453,7 @@ function onKeyDown(event) {
         case 68: // D key
             console.log("D");
             scene.view.prp=scene.view.prp.add(u);
-            scene.view.prp=scene.view.prp.add(u);
+            scene.view.srp=scene.view.srp.add(u);
             break;
         case 83: // S key
             console.log("S");
