@@ -29,6 +29,10 @@ function init() {
             srp: Vector3(20, 20, -40),
             vup: Vector3(0, 1, 0),
             clip: [-19, 5, -10, 8, 12, 100]
+            //prp: Vector3(0, 10, -5),
+            //srp: Vector3(20, 15, -40),
+            //vup: Vector3(1, 1, 0),
+            //clip: [-12, 6, -12, 6, 10, 100]
         },
         models: [
             {
@@ -56,7 +60,7 @@ function init() {
                 ],
                 matrix: new Matrix(4, 4)
             },
-            {
+            /*{
                 type: 'cube',
                 "center": [10, 30, 30],
                 "width": 10,
@@ -105,7 +109,7 @@ function init() {
                     "axis": "y",
                     "rps": 0.5
                 }
-            }
+            }*/
         ]
     };
 
@@ -140,21 +144,39 @@ function drawScene() {
     // TODO: implement drawing here!
     // For each model, for each edge
     for(let count = 0; count < scene.models.length; count++){       //in case there's multiple models for each scene
-        if(scene.models[i].type == 'cube'){
-            scene.models[i] = drawCube(model[i]);
-        } else if(scene.models[i].type == 'cylinder'){
-            scene.models[i] = drawCylinder(model[i]);
-        } else if(scene.models[i].type == 'cone'){
+        if(scene.models[count].type == 'cube'){
+            scene.models[count] = drawCube(model[count]);
+        } else if(scene.models[count].type == 'cylinder'){
+            scene.models[count] = drawCylinder(model[count]);
+        } else if(scene.models[count].type == 'cone'){
             scene.models[i] = drawCone(model[i]);
-        } else if(scene.models[i].type == 'sphere'){
-            scene.models[i] = drawSphere(model[i]);
+        } else if(scene.models[count].type == 'sphere'){
+            scene.models[count] = drawSphere(model[count]);
         } 
     }
 
     //Initializing Canonical View Calculations
     let nPer;
-    let mPer; 
-    if(scene.view == perspective){
+    let mPer;
+    let p0;
+    let p1;
+    let verts;
+    let line;
+    let results;
+
+    let clipped_vertices;
+    let scalar;
+
+    let identity= new Matrix(4,4);
+    mat4x4Identity(identity);
+
+    let v = new Matrix(4,4);
+    v.values = [[view.width/2, 0, 0, view.width/2],
+                       [0, view.height/2, 0, view.height/2],
+                       [0, 0, 1, 0],
+                       [0, 0, 0, 1]];
+
+    if(scene.view.type == 'perspective'){
         nPer = mat4x4Perspective(scene.view.prp, scene.view.srp, scene.view.vup, scene.view.clip);
         mPer = mat4x4MPer();
     } else{
@@ -162,28 +184,59 @@ function drawScene() {
         mPer = mat4x4MPar();
     }
 
-    //  * transform to canonical view volume
-    for(let count = 0; i < scene.models.length; i++){
-        for(let edge_count = 0; edge_count < model[i].edges.length; edge_count){
-            //get two edges
-            let p0 = model[i].edges[i];
-            let p1 = model[i].edges[i+1];
+    console.log(nPer);
 
-            //create a line
-            let line = makeLine(p0, p1);
+    for(let i = 0; i < scene.models.length; i++){
+        verts = scene.models[i].vertices;
+        clipped_vertices = new Array(0);
+        clippedVerts = new Array(0);
+        for(let vert_count = 0; vert_count < scene.models[i].vertices.length; vert_count++){
+            //  * transform to canonical view volume
+            verts[vert_count] = Matrix.multiply([nPer,verts[vert_count]]);
+        }
+        console.log(verts);
+        console.log(clipped_vertices);
+        for(let edge_count = 0; edge_count < scene.models[i].edges.length; edge_count++){
+            for(let j=0;j<scene.models[i].edges[edge_count].length-1;j++) {
 
-            //  * clip in 3D
-            clipLinePerspective(line);
-            
-            //  * project to 2D
-
+                //get two edges
+                p0 = verts[scene.models[i].edges[edge_count][j]];
+                p1 = verts[scene.models[i].edges[edge_count][j+1]];
+                console.log(p0);
+                console.log(p1);
+                line = {
+                    pt0: p0, 
+                    pt1: p1
+                };
+                line.pt0 = p0;
+                line.pt1 = p1;
+                console.log(line);
+                //  * clip in 3D
+                results=clipLinePerspective(line,scene.view.clip[4]/scene.view.clip[5]);
+                console.log(results);
+                if(results != null) {
+                    clipped_vertices.push(results.pt0);               
+                    clipped_vertices.push(results.pt1);
+                }
+            }
+        }
+        for(let j = 0; j < clipped_vertices.length; j++){
+            clipped_vertices[j] = Matrix.multiply([mPer,clipped_vertices[j]]);
+            clipped_vertices[j].scale(1/clipped_vertices[j].w);
+            clipped_vertices[j] = Matrix.multiply([v,clipped_vertices[j]]);
+        }
+        console.log(clipped_vertices);
+        for(let line_pt = 0; line_pt<clipped_vertices.length; line_pt=line_pt+2){
+        
+            // Select 2 Points that are connected
+            p0 = clipped_vertices[line_pt];
+            p1 = clipped_vertices[line_pt+1];
             //  * draw line
+            console.log("p0x " + p0.x + " p0y " + p0.y);
+            console.log("p1x " + p1.x + " p1y " + p1.y);
+            drawLine(p0.x,p0.y,p1.x,p1.y);
         }
     }
-}
-
-function makeLine(p0, p1){
-    return {p0 : p0, p1 : p1};
 }
 
 // Get outcode for vertex (parallel view volume)
@@ -250,6 +303,8 @@ function clipLineParallel(line) {
     
     if(out_reject > 0){
         return null;
+    } else if (out_accept == 0) {
+        return line;
     }
 
     //Initializing Parametric Line Eq. Values + Formulas
@@ -260,8 +315,8 @@ function clipLineParallel(line) {
 // Clip line - should either return a new line (with two endpoints inside view volume) or null (if line is completely outside view volume)
 function clipLinePerspective(line, z_min) {
     let result = null;
-    let p0 = Vector3(line.pt0.x, line.pt0.y, line.pt0.z); 
-    let p1 = Vector3(line.pt1.x, line.pt1.y, line.pt1.z);
+    let p0 = Vector4(line.pt0.x, line.pt0.y, line.pt0.z,1); 
+    let p1 = Vector4(line.pt1.x, line.pt1.y, line.pt1.z,1);
     let out0 = outcodePerspective(p0, z_min);
     let out1 = outcodePerspective(p1, z_min);
      
@@ -272,6 +327,8 @@ function clipLinePerspective(line, z_min) {
 
     if(out_reject > 0){ //both endpoints lie outside same edge, therefore line is completely outside view volume
         return result;
+    } else if(out_accept == 0) {
+        return line;
     }
 
     //Initializing Parametric Line Eq. Values + Formulas
@@ -282,9 +339,9 @@ function clipLinePerspective(line, z_min) {
     let y1 = p1.y;
     let z1 = p1.z;
     //let near = clip.near;
-    let near = clip[4];
+    let near = scene.view.clip[4];
     //let far = clip.far;
-    let far = clip[5];
+    let far = scene.view.clip[5];
     let zmin = -near/far;
     let t = 0;
 
@@ -335,14 +392,14 @@ function clipLinePerspective(line, z_min) {
         y = (1-t)*y0 + (t*y1);
         z = (1-t)*z0 + (t*z1);
         out0 = out0 - 2;
-    }else if(out >= 1){    //NEAR
+    }else if(out0 >= 1){    //NEAR
         t = near_t;
         x = (1-t)*x0 + (t*x1);
         y = (1-t)*y0 + (t*y1);
         z = (1-t)*z0 + (t*z1);
         out0 = out0 - 1;
     }
-    p0 = Vector3(x,y,z);    //create new clipped vector point
+    p0 = Vector4(x,y,z,1);    //create new clipped vector point
 
     //CLIPPING OUTCODE1
     if(out1 >= 32){  //LEFT
@@ -377,7 +434,7 @@ function clipLinePerspective(line, z_min) {
         y = (1-t)*y0 + (t*y1);
         z = (1-t)*z0 + (t*z1);
         out1 = out1 - 2;
-    }else if(out >= 1){    //NEAR
+    }else if(out1 >= 1){    //NEAR
         t = near_t;
         x = (1-t)*x0 + (t*x1);
         y = (1-t)*y0 + (t*y1);
@@ -385,7 +442,7 @@ function clipLinePerspective(line, z_min) {
         out1 = out1 - 1;
     }
     
-    p1 = Vector3(x,y,z);    //create new clipped vector point
+    p1 = Vector4(x,y,z,1);    //create new clipped vector point
     line.pt0 = p0;
     line.pt1 = p1;
     result = line;

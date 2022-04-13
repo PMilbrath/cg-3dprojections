@@ -7,9 +7,12 @@ function mat4x4Parallel(prp, srp, vup, clip) {
     let rotVRC = new Matrix(4,4);
     let n = prp.subtract(srp);
     n.normalize();
+    console.log(n);
     let u = vup.cross(n);
     u.normalize();
+    console.log(u);
     let v = n.cross(u);
+    console.log(v);
     rotVRC.values = [[u.x,u.y,u.z,0],
                      [v.x,v.y,v.z,0],
                      [n.x,n.y,n.z,0],
@@ -17,9 +20,9 @@ function mat4x4Parallel(prp, srp, vup, clip) {
 
     // 3. shear such that CW is on the z-axis
     let shearMat = new Matrix(4,4);
-    let dopx = (clip[0]+clip[1])/2 - prp.x;
-    let dopy = (clip[2]+clip[3])/2 - prp.y;
-    let dopz = (clip[4]+clip[5])/2 - prp.z;
+    let dopx = (clip[0]+clip[1])/2;
+    let dopy = (clip[2]+clip[3])/2;
+    let dopz = -clip[4];
     let shx = -dopx/dopz;
     let shy = -dopy/dopz;
     Mat4x4ShearXY(shearMat,shx,shy);
@@ -45,28 +48,36 @@ function mat4x4Parallel(prp, srp, vup, clip) {
 function mat4x4Perspective(prp, srp, vup, clip) {
     // 1. translate PRP to origin
     let transPrP = new Matrix(4,4);
-    Mat4x4Translate(transPrP,-prp.x,-prp.y,-prp.z);
-
+    Mat4x4Translate(transPrP,-1*prp.x,-1*prp.y,-1*prp.z);
+    //console.log(transPrP);
     // 2. rotate VRC such that (u,v,n) align with (x,y,z)
     let rotVRC = new Matrix(4,4);
     let n = prp.subtract(srp);
     n.normalize();
+    //console.log(n);
     let u = vup.cross(n);
     u.normalize();
+    //console.log(u);
     let v = n.cross(u);
+    //console.log(v);
     rotVRC.values = [[u.x,u.y,u.z,0],
                      [v.x,v.y,v.z,0],
                      [n.x,n.y,n.z,0],
                      [0,0,0,1]];
+    //console.log(rotVRC);
 
     // 3. shear such that CW is on the z-axis
     let shearMat = new Matrix(4,4);
-    let dopx = (clip[0]+clip[1])/2 - prp.x;
-    let dopy = (clip[2]+clip[3])/2 - prp.y;
-    let dopz = (clip[4]+clip[5])/2 - prp.z;
+    let dopx = (clip[0]+clip[1])/2;
+    let dopy = (clip[2]+clip[3])/2;
+    let dopz = -clip[4];
+    //console.log(dopx);
+    //console.log(dopy);
+    //console.log(dopz);
     let shx = -dopx/dopz;
     let shy = -dopy/dopz;
     Mat4x4ShearXY(shearMat,shx,shy);
+    //console.log(shearMat);
 
     // 4. scale such that view volume bounds are ([z,-z], [z,-z], [-1,zmin])
     let scaleMat = new Matrix(4,4);
@@ -74,7 +85,7 @@ function mat4x4Perspective(prp, srp, vup, clip) {
     let sperY = (2*clip[4])/((clip[3]-clip[2])*clip[5]);
     let sperZ = 1/(clip[5]);
     Mat4x4Scale(scaleMat,sperX,sperY,sperZ);
-
+    //console.log(scaleMat);
     let transform = Matrix.multiply([scaleMat,shearMat,rotVRC,transPrP]);
     return transform;
 }
