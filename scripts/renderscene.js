@@ -29,10 +29,6 @@ function init() {
             srp: Vector3(20, 20, -40),
             vup: Vector3(0, 1, 0),
             clip: [-19, 5, -10, 8, 12, 100]
-            //prp: Vector3(0, 10, -5),
-            //srp: Vector3(20, 15, -40),
-            //vup: Vector3(1, 1, 0),
-            //clip: [-12, 6, -12, 6, 10, 100]
         },
         models: [
             {
@@ -59,14 +55,14 @@ function init() {
                     [4, 9]
                 ],
                 matrix: new Matrix(4, 4)
-            },
-            /*{
+            }/*,
+            {
                 type: 'cube',
-                "center": [10, 30, 30],
+                "center": [15, 16, -45],
                 "width": 10,
                 "height": 10,
                 "depth": 10,
-                "animation": {
+                /*"animation": {
                     "axis": "y",
                     "rps": 0.5
                 }
@@ -134,24 +130,25 @@ function animate(timestamp) {
 
     // step 4: request next animation frame (recursively calling same function)
     // (may want to leave commented out while debugging initially)
-    // window.requestAnimationFrame(animate);
+    const myTimeout = setTimeout(window.requestAnimationFrame(animate), 5000);
+    
 }
 
 // Main drawing code - use information contained in variable `scene`
 function drawScene() {
-    console.log(scene);
+    //console.log(scene);
     
     // TODO: implement drawing here!
     // For each model, for each edge
     for(let count = 0; count < scene.models.length; count++){       //in case there's multiple models for each scene
         if(scene.models[count].type == 'cube'){
-            scene.models[count] = drawCube(model[count]);
+            scene.models[count] = drawCube(scene.models[count]);
         } else if(scene.models[count].type == 'cylinder'){
-            scene.models[count] = drawCylinder(model[count]);
+            scene.models[count] = drawCylinder(scene.models[count]);
         } else if(scene.models[count].type == 'cone'){
-            scene.models[i] = drawCone(model[i]);
+            scene.models[i] = drawCone(scene.models[i]);
         } else if(scene.models[count].type == 'sphere'){
-            scene.models[count] = drawSphere(model[count]);
+            scene.models[count] = drawSphere(scene.models[count]);
         } 
     }
 
@@ -165,7 +162,6 @@ function drawScene() {
     let results;
 
     let clipped_vertices;
-    let scalar;
 
     let identity= new Matrix(4,4);
     mat4x4Identity(identity);
@@ -184,7 +180,7 @@ function drawScene() {
         mPer = mat4x4MPar();
     }
 
-    console.log(nPer);
+    //console.log(nPer);
 
     for(let i = 0; i < scene.models.length; i++){
         verts = scene.models[i].vertices;
@@ -194,26 +190,22 @@ function drawScene() {
             //  * transform to canonical view volume
             verts[vert_count] = Matrix.multiply([nPer,verts[vert_count]]);
         }
-        console.log(verts);
-        console.log(clipped_vertices);
+        //console.log(verts);
+        //console.log(clipped_vertices);
         for(let edge_count = 0; edge_count < scene.models[i].edges.length; edge_count++){
             for(let j=0;j<scene.models[i].edges[edge_count].length-1;j++) {
 
                 //get two edges
                 p0 = verts[scene.models[i].edges[edge_count][j]];
                 p1 = verts[scene.models[i].edges[edge_count][j+1]];
-                console.log(p0);
-                console.log(p1);
                 line = {
                     pt0: p0, 
                     pt1: p1
                 };
                 line.pt0 = p0;
                 line.pt1 = p1;
-                console.log(line);
                 //  * clip in 3D
                 results=clipLinePerspective(line,scene.view.clip[4]/scene.view.clip[5]);
-                console.log(results);
                 if(results != null) {
                     clipped_vertices.push(results.pt0);               
                     clipped_vertices.push(results.pt1);
@@ -225,15 +217,15 @@ function drawScene() {
             clipped_vertices[j].scale(1/clipped_vertices[j].w);
             clipped_vertices[j] = Matrix.multiply([v,clipped_vertices[j]]);
         }
-        console.log(clipped_vertices);
+        //console.log(clipped_vertices);
         for(let line_pt = 0; line_pt<clipped_vertices.length; line_pt=line_pt+2){
         
             // Select 2 Points that are connected
             p0 = clipped_vertices[line_pt];
             p1 = clipped_vertices[line_pt+1];
             //  * draw line
-            console.log("p0x " + p0.x + " p0y " + p0.y);
-            console.log("p1x " + p1.x + " p1y " + p1.y);
+            //console.log("p0x " + p0.x + " p0y " + p0.y);
+            //console.log("p1x " + p1.x + " p1y " + p1.y);
             drawLine(p0.x,p0.y,p1.x,p1.y);
         }
     }
@@ -349,7 +341,7 @@ function clipLinePerspective(line, z_min) {
     let y = (1-t)*y0 + (t*y1);
     let z = (1-t)*z0 + (t*z1);
 
-    //Intersection t-value formulas
+    //Intersection t-value formulasl
 
     left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
     bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
@@ -451,7 +443,10 @@ function clipLinePerspective(line, z_min) {
 
 // Called when user presses a key on the keyboard down 
 function onKeyDown(event) {
-    switch (event.keyCode) {
+    let n = Vector3(1,0,0);
+    let u = Vector3(0,1,0);
+
+    switch (event.keyCode) {    
         case 37: // LEFT Arrow
             console.log("left");
             break;
@@ -460,15 +455,23 @@ function onKeyDown(event) {
             break;
         case 65: // A key
             console.log("A");
+            scene.view.prp=scene.view.prp.subtract(u);
+            scene.view.srp=scene.view.srp.subtract(u);
             break;
         case 68: // D key
             console.log("D");
+            scene.view.prp=scene.view.prp.add(u);
+            scene.view.prp=scene.view.prp.add(u);
             break;
         case 83: // S key
             console.log("S");
+            scene.view.prp=scene.view.prp.subtract(n);
+            scene.view.srp=scene.view.srp.subtract(n);
             break;
         case 87: // W key
             console.log("W");
+            scene.view.prp=scene.view.prp.add(n);
+            scene.view.srp=scene.view.srp.add(n);
             break;
     }
 }

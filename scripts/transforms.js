@@ -54,11 +54,14 @@ function mat4x4Perspective(prp, srp, vup, clip) {
     let rotVRC = new Matrix(4,4);
     let n = prp.subtract(srp);
     n.normalize();
+    //console.log('n');
     //console.log(n);
     let u = vup.cross(n);
     u.normalize();
+    //console.log('u');
     //console.log(u);
     let v = n.cross(u);
+    //console.log('v');
     //console.log(v);
     rotVRC.values = [[u.x,u.y,u.z,0],
                      [v.x,v.y,v.z,0],
