@@ -65,7 +65,7 @@ function init() {
             //     type: 'cube',
             //     vertices: [],
             //     edges: [],
-            //     "center": Vector4(20, 20, -25, 1),
+            //     "center": Vector4(20, 20, -30, 1),
             //     "width": 10,
             //     "height": 10,
             //     "depth": 10,
@@ -79,8 +79,8 @@ function init() {
                 type: 'cylinder',
                 vertices: [],
                 edges: [],
-                "center": Vector4(0, 50, -30, 1),
-                "height": 20,
+                "center": (0, 50, -30, 1),
+                "height": 15,
                 "radius": 5,
                 "sides": 6,
                 "animation": {
@@ -93,7 +93,7 @@ function init() {
             //     type: 'cone',
             //     vertices: [],
             //     edges: [],
-            //     "center": Vector4(-10, -10, 20, 1),
+            //     "center": Vector4(5, 25, -15, 1),
             //     "height": 25,
             //     "radius": 5,
             //     "sides": 12,
@@ -142,13 +142,14 @@ function animate(timestamp) {
 
     // step 4: request next animation frame (recursively calling same function)
     // (may want to leave commented out while debugging initially)
-    // window.requestAnimationFrame(animate(time));
-    //}
-    
+    // const myTimeout = setTimeout(() => {
+    //     window.requestAnimationFrame(animate);
+    // }, 5000);
 }
 
 // Main drawing code - use information contained in variable `scene`
 function drawScene() {
+    ctx.clearRect(0, 0, view.width, view.height);
     console.log(scene);
     // For each model, for each edge
     for(let count = 0; count < scene.models.length; count++){       //in case there's multiple models for each scene
@@ -204,7 +205,7 @@ function drawScene() {
         // console.log(verts);
         // console.log(clipped_vertices);
         // console.log(scene.models.edges.length);
-        console.log(scene.models.type);
+        // console.log(scene.models.type);
         for(let edge_count = 0; edge_count < scene.models[i].edges.length; edge_count++){       //looks at every edge
             // console.log(scene.models.edges.length);
             for(let j=0;j<scene.models[i].edges[edge_count].length-1;j++) {                     //looks p0 and p1, make a line b/w both points, and clip
@@ -223,7 +224,7 @@ function drawScene() {
                 // console.log(line);
                 //  * clip in 3D
                 results=clipLinePerspective(line,scene.view.clip[4]/scene.view.clip[5]);
-                console.log(results);
+                // console.log(results);
                 if(results != null) {
                     clipped_vertices.push(results.pt0);               
                     clipped_vertices.push(results.pt1);
@@ -405,12 +406,13 @@ function clipLineParallel(line) {
 function clipLinePerspective(line, z_min) {
     // console.log("ENTERING CLIPPING");
     let result = null;
-    
     let p0 = Vector4(line.pt0.x, line.pt0.y, line.pt0.z,1); 
     let p1 = Vector4(line.pt1.x, line.pt1.y, line.pt1.z,1);
     let out0 = outcodePerspective(p0, z_min);
     let out1 = outcodePerspective(p1, z_min);
      
+    let out;
+    let select;
     //Trivial Accept: Both endpoints are in view rectangle - Bitwise OR the outcodes
     let out_accept = (out0 | out1);
     //Trival Reject: Both endpoints lie outside the same edge - Bitwise AND the outcodes -> result not 0
@@ -430,145 +432,120 @@ function clipLinePerspective(line, z_min) {
     let x1 = p1.x;
     let y1 = p1.y;
     let z1 = p1.z;
-    // let near = scene.view.clip[4];
-    // let far = scene.view.clip[5];
-    // let zmin = -near/far;
+    //let near = clip.near;
+    let near = scene.view.clip[4];
+    //let far = clip.far;
+    let far = scene.view.clip[5];
+    let zmin = -near/far;
     let t = 0;
 
     let x = (1-t)*x0 + (t*x1);
     let y = (1-t)*y0 + (t*y1);
     let z = (1-t)*z0 + (t*z1);
 
+
     //Intersection t-value formulas
 
-    let left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
-    let bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
-    let near_t = (z0 - z_min)/-(z1-z0);
-    let back_t = (-z0 - 1)/(z1-z0);
-    let right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
-    let top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
+    left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
+    bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
+    near_t = (z0 - zmin)/-(z1-z0);
+    back_t = (-z0 - 1)/(z1-z0);
+    right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
+    top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
 
     //CLIPPING OUTCODE0
     //BOUNDS: LEFT = z, RIGHT = -z, BOTTOM y = z, TOP = -z, FAR z = 1, NEAR z = z_min
-    if(out0 >= 32){  //LEFT
-        t = left_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 32;
-        // console.log("Out0: "+out0);
-    }else if(out0 >= 16){  //RIGHT
-        t = right_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 16;
-        // console.log("Out0: "+out0);
-    }
-    if(out0 >= 8){   //TOP
-        t = top_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 8;
-        // console.log("Out0: "+out0);
-    }else if(out0 >= 4){   //BOTTOM
-        t = bot_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 4;
-        // console.log("Out0: "+out0);
-    }
-    if(out0 >= 2){   //FAR
-        t = back_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 2;
-        // console.log("Out0: "+out0);
-    }else if(out0 >= 1){    //NEAR
-        t = near_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 1;
-        // console.log("Out0: "+out0);
-    }
-    p0 = Vector4(x,y,z,1);    //create new clipped vector point
+    while(true) {
+        out_reject=(out0 & out1);
+        out_accept=(out0|out1);
+        if(out_reject > 0){ //both endpoints lie outside same edge, therefore line is completely outside view volume
+            return result;
+        } else if(out_accept == 0) {
+            return line;
+        }
 
-    //CLIPPING OUTCODE1
-    // console.log("Out1: "+out1);
-    if(out1 >= 32){  //LEFT
-        t = left_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 32;
-        // console.log("Out1: "+out1);
-    }else if(out1 >= 16){  //RIGHT
-        t = right_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 16;
-        // console.log("Out1: "+out1);
+        if(out0 != 0) {
+            select=0;
+            out = out0;
+        } else {
+            select=1;
+            out = out1;
+        }
+
+    //CLIPPING OUTCODE
+        if(out >= 32){  //LEFT
+            t = left_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 32;
+        }else if(out >= 16){  //RIGHT
+            t = right_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 16;
+        }else if(out >= 8){   //TOP
+            t = top_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 8;
+        }else if(out >= 4){   //BOTTOM
+            t = bot_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 4;
+        } else if(out >= 2){   //FAR
+            t = back_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 2;
+        } else if(out >= 1){    //NEAR
+            t = near_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            out = out - 1;
+        }
+
+        if(select ==0) {
+        line.pt0 = Vector4(x,y,z,1);    //create new clipped vector point
+        out0 = out;
+        x0 = x;
+        y0 = y;
+        z0 = z;
+        } else {
+        line.pt1 = Vector4(x,y,z,1);    //create new clipped vector point
+        x1 = x;
+        y1 = y;
+        z1 = z;
+        out1 = out;
+        }
     }
-    if(out1 >= 8){   //TOP
-        t = top_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 8;
-        // console.log("Out1: "+out1);
-    }else if(out1 >= 4){   //BOTTOM
-        t = bot_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 4;
-        // console.log("Out1: "+out1);
-    }
-    if(out1 >= 2){   //FAR
-        t = back_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 2;
-        // console.log("Out1: "+out1);
-    }else if(out1 >= 1){    //NEAR
-        t = near_t;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out1 = out1 - 1;
-        // console.log("Out1: "+out1);
-    }
-    
-    p1 = Vector4(x,y,z,1);    //create new clipped vector point
-    line.pt0 = p0;
-    line.pt1 = p1;
-    result = line;
-    return result;
 }
 
 // Called when user presses a key on the keyboard down 
 function onKeyDown(event) {
     //PRP: Camera, SRP: What the camera is looking at: VUP: The direction of "UP" in regards to the camera
     //n-axis: normalized(PRP-SRP)
-    let n = scene.view.prp.subtract(scene.view.srp); //from the SRP to PRP
+    let n = scene.view.prp.subtract(scene.view.srp);
     n.normalize();
     //u-axis: normalized(VUP X n-axis)
-    let u = scene.view.vup.cross(n);                 //right with respect to virtual camera's image plane
+    //right with respect to virtual camera's image plane
+    let u = scene.view.vup.cross(n);
     u.normalize();
-    //v-axis: n-axis X u-axis
-    let v = n.cross(u);                              //up with respect to virtual camera's image plane
-    v.normalize();
+    let v = n.cross(u);
+    //n.scale(.1);
+    //u.scale(.1);
     let radian = degreeToRadian(10);
     let verts;
     let newSRP;
     let newPRP;
     let rotVal;
+    
     switch (event.keyCode) {
         case 37: // LEFT Arrow  //translate the PRP and SRP along the u-axis
             console.log("left");
@@ -588,15 +565,23 @@ function onKeyDown(event) {
             break;
         case 65: // A key   //translate the PRP and SRP along the u-axis
             console.log("A");
+            scene.view.prp=scene.view.prp.subtract(u);
+            scene.view.srp=scene.view.srp.subtract(u);
             break;
         case 68: // D key   //translate the PRP and SRP along the u-axis
             console.log("D");
+            scene.view.prp=scene.view.prp.add(u);
+            scene.view.srp=scene.view.srp.add(u);
             break;
         case 83: // S key   //translate the PRP and SRP along the n-axis
             console.log("S");
+            scene.view.prp=scene.view.prp.subtract(n);
+            scene.view.srp=scene.view.srp.subtract(n);
             break;
         case 87: // W key   //translate the PRP and SRP along the n-axis
             console.log("W");
+            scene.view.prp=scene.view.prp.add(n);
+            scene.view.srp=scene.view.srp.add(n);
             break;
     }
 }
@@ -643,32 +628,34 @@ function drawCone(model){
     let center = model.center;
     let height = model.height;
     let radius = model.radius;
-
-    model.vertices.push(center, center+(height/2), center)
+    let tip = Vector4(center.x, center.y+(height/2), center.z, 1);
     for(let i = 0; i < sides; i++){     //create vertices
         //create coordinate for the original point in regards to x,z
         let radian = degreeToRadian((360/sides)*i);
-        let x0 = center[0] + radius*Math.cos(radian);
-        let z0 = center[2] + radius*Math.sin(radian);
+        let x0 = center.x + radius*Math.cos(radian);
+        let z0 = center.z + radius*Math.sin(radian);
 
         //create coordinate for the next point in regards to x,z
         radian = degreeToRadian((360/sides)*(i+1));
-        let x1 = center[0] + radius*Math.cos(radian);
-        let z1 = center[2] + radius*Math.sin(radian);
+        let x1 = center.x + radius*Math.cos(radian);
+        let z1 = center.z + radius*Math.sin(radian);
         
         //creating points
-        let p0 = Vector4(x0, center[1]-(height/2), z0, 1);
-        let p1 = Vector4(z0, center[1]-(height/2), z1, 1);
-        model.vertices.push(p0);
-        model.vertices.push(p1);
+        let p0 = Vector4(x0, center.y-(height/2), z0, 1);
+        let p1 = Vector4(x1, center.y-(height/2), z1, 1);
+        // let p1 = Vector4()
+        console.log(p0);
+        console.log(p1);
+        model.vertices.push(p0, p1);
+        model.vertices.push(p0, tip, p1);
+        // model.vertices.push(p1);
     }
-
-    for(let i = 0; i <= model.vertices.length; i++){
-        let circle = [i,i+1];
-        let cone = [0, i];
-
+    
+    for(let i = 0; i < model.vertices.length; i++){
+        let circle = [i,(i+1) % model.vertices.length];
+        // let cone = [0, (i+1) % model.vertices.length];
         model.edges.push(circle);
-        model.edges.push(cone);
+        // model.edges.push(cone);
     }
     return model;
 }
@@ -712,7 +699,8 @@ function drawCylinder(model){
          * p2 = top,  p3 = top next point
          */
         model.vertices.push(p0, p2);
-        // model.vertices.push(p1, p3);
+        model.vertices.push(p0, p1);
+        model.vertices.push(p2, p3);
         // model.vertices.push(p0);
         // model.vertices.push(p1);
         // model.vertices.push(p2);
@@ -722,10 +710,8 @@ function drawCylinder(model){
         let circleEdges;
         // circleEdges = [i, (i+1) % model.vertices.length, (i+3)% model.vertices.length, (i+2) % model.vertices.length, i];
         if(i%2 == 0){
-            circleEdges
             circleEdges = [i, (i+2) % model.vertices.length];
             linesArray = [i, i+1];
-            bottom_circleEdges = [i+1, (i+2) % model.vertices.length];
         } 
         else if(i%2 == 1){
             circleEdges = [i, (i+2) % model.vertices.length];
@@ -735,13 +721,11 @@ function drawCylinder(model){
             linesArray = [i, i+1];
         }
         console.log(circleEdges);
-        console.log(linesArray);
-        console.log("\n");
+        // console.log(linesArray);
+        // console.log("\n");
         model.edges.push(circleEdges);
         model.edges.push(linesArray);
-        // model.edges.push(bottom_circleEdges);
     }
-
     return model;
 }
 
