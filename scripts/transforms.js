@@ -40,7 +40,6 @@ function mat4x4Parallel(prp, srp, vup, clip) {
      return transform;
 }
 
-
 // create a 4x4 matrix to the perspective projection / view matrix
 function mat4x4Perspective(prp, srp, vup, clip) {
     // 1. translate PRP to origin
