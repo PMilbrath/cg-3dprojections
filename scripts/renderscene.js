@@ -24,7 +24,7 @@ function init() {
     // initial scene... feel free to change this
     scene = {
         view: {
-            type: 'perspective',
+            type: 'parallel',
             prp: Vector3(44, 20, -16),
             srp: Vector3(20, 20, -40),
             vup: Vector3(0, 1, 0),
@@ -119,27 +119,12 @@ function init() {
         ]
     };
 
-    for(let count = 0; count < scene.models.length; count++){       //in case there's multiple models for each scene
-        console.log("Model Type: " + scene.models[count].type)
-        if(scene.models[count].type == 'cube'){
-            scene.models[count] = drawCube(scene.models[count]);
-        } else if(scene.models[count].type == 'cylinder'){
-            scene.models[count] = drawCylinder(scene.models[count]);
-        } else if(scene.models[count].type == 'cone'){
-            scene.models[count] = drawCone(scene.models[count]);
-        } else if(scene.models[count].type == 'sphere'){
-            scene.models[count] = drawSphere(scene.models[count]);
-        } 
-    }
-
     // event handler for pressing arrow keys
     document.addEventListener('keydown', onKeyDown, false);
     
     // start animation loop
     start_time = performance.now(); // current timestamp in milliseconds
-    const myTimeout = setTimeout(() => {
-        window.requestAnimationFrame(animate);
-   }, 1000);
+    window.requestAnimationFrame(animate);
 }
 
 // Animation loop - repeatedly calls rendering code
@@ -160,7 +145,7 @@ function animate(timestamp) {
     // (may want to leave commented out while debugging initially)
     const myTimeout = setTimeout(() => {
          window.requestAnimationFrame(animate);
-    }, 5000);
+    }, 1000);
 }
 
 // Main drawing code - use information contained in variable `scene`
@@ -240,7 +225,11 @@ function drawScene() {
                 line.pt1 = p1;
                 // console.log(line);
                 //  * clip in 3D
-                results=clipLinePerspective(line,scene.view.clip[4]/scene.view.clip[5]);
+                if(scene.view.type='perspective') {
+                    results=clipLinePerspective(line,scene.view.clip[4]/scene.view.clip[5]);
+                } else {
+                    results=clipLineParallel(line);
+                }
                 // console.log(results);
                 if(results != null) {
                     clipped_vertices.push(results.pt0);               
@@ -365,12 +354,12 @@ function clipLineParallel(line) {
     // right_t = (x0 + 1)/(-x0+x1);
     // top_t = (y0 + 1)/(-y0+y1);
 
-    left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
-    bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
-    near_t = (z0 - zmin)/-(z1-z0);
-    back_t = (-z0 - 1)/(z1-z0);
-    right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
-    top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
+    left_t = (-1-x0)/(x1-x0);
+    bot_t = (-1-y0)/(y1-y0);
+    near_t = (0-z0)/-(z1-z0);
+    back_t = (-1-z0)/(z1-z0);
+    right_t = (1-x0)/(x1-x0);
+    top_t = (1-y0)/(y1-y0);
 
     let loop = 0;
     //CLIPPING OUTCODE0
@@ -393,13 +382,13 @@ function clipLineParallel(line) {
             out = out1;
         }
 
-        left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
-        bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
-        near_t = (z0 - zmin)/-(z1-z0);
-        back_t = (-z0 - 1)/(z1-z0);
-        right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
-        top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
 
+        left_t = (-1-x0)/(x1-x0);
+        bot_t = (-1-y0)/(y1-y0);
+        near_t = (0-z0)/-(z1-z0);
+        back_t = (-1-z0)/(z1-z0);
+        right_t = (1-x0)/(x1-x0);
+        top_t = (1-y0)/(y1-y0);
 
         if(out >= 32){  //LEFT
             t = left_t;
@@ -449,17 +438,17 @@ function clipLineParallel(line) {
             x0 = x;
             y0 = y;
             z0 = z;
-            out0 = outcodeParallel(line.pt0, z_min);
+            out0 = outcodeParallel(line.pt0);
         } else {
             line.pt1 = Vector4(x,y,z,1);    //create new clipped vector point
             x1 = x;
             y1 = y;
             z1 = z;
-            out1 = outcodeParallel(line.pt1, z_min);
+            out1 = outcodeParallel(line.pt1);
         }
 
         if(loop == 8) {
-            return null;
+            return "ERROR";
         }
         loop++;
     }
@@ -603,7 +592,7 @@ function clipLinePerspective(line, z_min) {
         }
 
         if(loop == 8) {
-            return null;
+            return "ERROR";
         }
         loop++;
     }
