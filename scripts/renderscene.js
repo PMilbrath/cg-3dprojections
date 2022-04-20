@@ -36,31 +36,31 @@ function init() {
             //clip: [-12, 6, -12, 6, 10, 100]
         },
         models: [
-            // {
-            //     type: 'generic',
-            //     vertices: [
-            //         Vector4( 0,  0, -30, 1),
-            //         Vector4(20,  0, -30, 1),
-            //         Vector4(20, 12, -30, 1),
-            //         Vector4(10, 20, -30, 1),
-            //         Vector4( 0, 12, -30, 1),
-            //         Vector4( 0,  0, -60, 1),
-            //         Vector4(20,  0, -60, 1),
-            //         Vector4(20, 12, -60, 1),
-            //         Vector4(10, 20, -60, 1),
-            //         Vector4( 0, 12, -60, 1)
-            //     ],
-            //     edges: [
-            //         [0, 1, 2, 3, 4, 0],
-            //         [5, 6, 7, 8, 9, 5],
-            //         [0, 5],
-            //         [1, 6],
-            //         [2, 7],
-            //         [3, 8],
-            //         [4, 9]
-            //     ],
-            //     matrix: new Matrix(4, 4)
-            // },
+             {
+                 type: 'generic',
+                 vertices: [
+                     Vector4( 0,  0, -30, 1),
+                     Vector4(20,  0, -30, 1),
+                     Vector4(20, 12, -30, 1),
+                     Vector4(10, 20, -30, 1),
+                     Vector4( 0, 12, -30, 1),
+                     Vector4( 0,  0, -60, 1),
+                     Vector4(20,  0, -60, 1),
+                     Vector4(20, 12, -60, 1),
+                     Vector4(10, 20, -60, 1),
+                     Vector4( 0, 12, -60, 1)
+                 ],
+                 edges: [
+                     [0, 1, 2, 3, 4, 0],
+                     [5, 6, 7, 8, 9, 5],
+                     [0, 5],
+                     [1, 6],
+                     [2, 7],
+                     [3, 8],
+                     [4, 9]
+                 ],
+                 matrix: new Matrix(4, 4)
+            },
             // {
             //     type: 'cube',
             //     vertices: [],
@@ -74,21 +74,21 @@ function init() {
             //         "rps": 0.5
             //     },
             //     matrix: new Matrix(4, 4),
-            // },
-            {
-                type: 'cylinder',
-                vertices: [],
-                edges: [],
-                "center": (0, 50, -30, 1),
-                "height": 15,
-                "radius": 5,
-                "sides": 6,
-                "animation": {
-                    "axis": "y",
-                    "rps": 0.5
-                },
-                matrix: new Matrix(4, 4)
-            },
+            //},
+            //{
+            //    type: 'cylinder',
+            //    vertices: [],
+            //    edges: [],
+            //    "center": Vector4(0, 50, -30, 1),
+            //    "height": 15,
+            //    "radius": 5,
+            //    "sides": 6,
+            //    "animation": {
+            //        "axis": "y",
+            //        "rps": 0.5
+            //    },
+            //    matrix: new Matrix(4, 4)
+            //},
             // {
             //     type: 'cone',
             //     vertices: [],
@@ -119,12 +119,27 @@ function init() {
         ]
     };
 
+    for(let count = 0; count < scene.models.length; count++){       //in case there's multiple models for each scene
+        console.log("Model Type: " + scene.models[count].type)
+        if(scene.models[count].type == 'cube'){
+            scene.models[count] = drawCube(scene.models[count]);
+        } else if(scene.models[count].type == 'cylinder'){
+            scene.models[count] = drawCylinder(scene.models[count]);
+        } else if(scene.models[count].type == 'cone'){
+            scene.models[count] = drawCone(scene.models[count]);
+        } else if(scene.models[count].type == 'sphere'){
+            scene.models[count] = drawSphere(scene.models[count]);
+        } 
+    }
+
     // event handler for pressing arrow keys
     document.addEventListener('keydown', onKeyDown, false);
     
     // start animation loop
     start_time = performance.now(); // current timestamp in milliseconds
-    window.requestAnimationFrame(animate);
+    const myTimeout = setTimeout(() => {
+        window.requestAnimationFrame(animate);
+   }, 1000);
 }
 
 // Animation loop - repeatedly calls rendering code
@@ -138,13 +153,14 @@ function animate(timestamp) {
     // TODO: implement this!
 
     // step 3: draw scene
+
     drawScene();
 
     // step 4: request next animation frame (recursively calling same function)
     // (may want to leave commented out while debugging initially)
-    // const myTimeout = setTimeout(() => {
-    //     window.requestAnimationFrame(animate);
-    // }, 5000);
+    const myTimeout = setTimeout(() => {
+         window.requestAnimationFrame(animate);
+    }, 5000);
 }
 
 // Main drawing code - use information contained in variable `scene`
@@ -194,13 +210,14 @@ function drawScene() {
 
     // console.log(nPer);
     for(let i = 0; i < scene.models.length; i++){//looks through every model
-        verts = scene.models[i].vertices;
+        verts = new Array(0);
         // console.log(verts);
         clipped_vertices = new Array(0);
         clippedVerts = new Array(0);
         for(let vert_count = 0; vert_count < scene.models[i].vertices.length; vert_count++){    //looks at every vertices
             //  * transform to canonical view volume
-            verts[vert_count] = Matrix.multiply([nPer,verts[vert_count]]);
+
+            verts.push(Matrix.multiply([nPer,scene.models[i].vertices[vert_count]]));
         }
         // console.log(verts);
         // console.log(clipped_vertices);
@@ -304,6 +321,9 @@ function clipLineParallel(line) {
     let p1 = Vector3(line.pt1.x, line.pt1.y, line.pt1.z);
     let out0 = outcodeParallel(p0);
     let out1 = outcodeParallel(p1);
+
+    let out;
+    let select;
     
     // TODO: implement clipping here!
     //Trivial Accept: Both endpoints are in view rectangle - Bitwise OR the outcodes
@@ -352,54 +372,98 @@ function clipLineParallel(line) {
     right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
     top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
 
+    let loop = 0;
     //CLIPPING OUTCODE0
     //BOUNDS: LEFT = z, RIGHT = -z, BOTTOM y = z, TOP = -z, FAR z = 1, NEAR z = z_min
-    if(out0 >= 32){  //LEFT
-        t = left_t;
-        x = 1;
-        // x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 32;
-    }else if(out0 >= 16){  //RIGHT
-        t = right_t;
-        x = -1;
-        // x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 16;
-    }
-    if(out0 >= 8){   //TOP
-        t = top_t;
-        y = 1;
-        x = (1-t)*x0 + (t*x1);
-        // y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 8;
-    }else if(out0 >= 4){   //BOTTOM
-        t = bot_t;
-        y = -1;
-        x = (1-t)*x0 + (t*x1);
-        // y = (1-t)*y0 + (t*y1);
-        z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 4;
-    }
-    if(out0 >= 2){   //FAR
-        t = back_t;
-        z = -1;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
+    while (true) {
+
+        out_reject=(out0 & out1);
+        out_accept=(out0|out1);
+        if(out_reject > 0){ //both endpoints lie outside same edge, therefore line is completely outside view volume
+            return result;
+        } else if(out_accept == 0) {
+            return line;
+        }
+
+        if(out0 != 0) {
+            select=0;
+            out = out0;
+        } else {
+            select=1;
+            out = out1;
+        }
+
+        left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
+        bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
+        near_t = (z0 - zmin)/-(z1-z0);
+        back_t = (-z0 - 1)/(z1-z0);
+        right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
+        top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
+
+
+        if(out >= 32){  //LEFT
+            t = left_t;
+            x = 1;
+            // x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            //out0 = out0 - 32;
+        } else if(out >= 16){  //RIGHT
+            t = right_t;
+            x = -1;
+            // x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            //out0 = out0 - 16;
+        } else if(out >= 8){   //Bottom
+            t = bot_t;
+            y = -1;
+            x = (1-t)*x0 + (t*x1);
+            // y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            //out0 = out0 - 8;
+        }else if(out >= 4){   //Top
+            t = top_t;
+            y = 1;
+            x = (1-t)*x0 + (t*x1);
+            // y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            //out0 = out0 - 4;
+        } else if(out >= 2){   //FAR
+            t = back_t;
+            z = -1;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
         // z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 2;
-    }else if(out0 >= 1){    //NEAR
-        t = near_t;
-        z = 0;
-        x = (1-t)*x0 + (t*x1);
-        y = (1-t)*y0 + (t*y1);
+        //out0 = out0 - 2;
+        } else if(out >= 1){    //NEAR
+            t = near_t;
+            z = 0;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
         // z = (1-t)*z0 + (t*z1);
-        out0 = out0 - 1;
+        //out0 = out0 - 1;
+        }
+        if(select ==0) {
+            line.pt0 = Vector4(x,y,z,1);    //create new clipped vector point
+            x0 = x;
+            y0 = y;
+            z0 = z;
+            out0 = outcodeParallel(line.pt0, z_min);
+        } else {
+            line.pt1 = Vector4(x,y,z,1);    //create new clipped vector point
+            x1 = x;
+            y1 = y;
+            z1 = z;
+            out1 = outcodeParallel(line.pt1, z_min);
+        }
+
+        if(loop == 8) {
+            return null;
+        }
+        loop++;
     }
-    return result;
+    //return result;
 }
 
 // Clip line - should either return a new line (with two endpoints inside view volume) or null (if line is completely outside view volume)
@@ -408,8 +472,8 @@ function clipLinePerspective(line, z_min) {
     let result = null;
     let p0 = Vector4(line.pt0.x, line.pt0.y, line.pt0.z,1); 
     let p1 = Vector4(line.pt1.x, line.pt1.y, line.pt1.z,1);
-    let out0 = outcodePerspective(p0, z_min);
-    let out1 = outcodePerspective(p1, z_min);
+    let out0 = outcodePerspective(line.pt0, z_min);
+    let out1 = outcodePerspective(line.pt1, z_min);
      
     let out;
     let select;
@@ -443,11 +507,10 @@ function clipLinePerspective(line, z_min) {
     let y = (1-t)*y0 + (t*y1);
     let z = (1-t)*z0 + (t*z1);
 
-
     //Intersection t-value formulas
 
     left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
-    bot_t = (y0 + z0)/((y1-y0)-(z1-z0));
+    bot_t = (-y0 + z0)/((y1-y0)-(z1-z0));
     near_t = (z0 - zmin)/-(z1-z0);
     back_t = (-z0 - 1)/(z1-z0);
     right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
@@ -458,11 +521,23 @@ function clipLinePerspective(line, z_min) {
     while(true) {
         out_reject=(out0 & out1);
         out_accept=(out0|out1);
+
         if(out_reject > 0){ //both endpoints lie outside same edge, therefore line is completely outside view volume
             return result;
         } else if(out_accept == 0) {
             return line;
         }
+
+        console.log("x0: " + x0 + ", y0: " + y0 + ", z0: " + z0);
+        console.log("x1: " + x1 + ", y1: " + y1 + ", z1: " + z1);
+        console.log("out1: " + out0 + ", out1: " + out1);
+
+        left_t = (-x0 + z0)/((x1-x0)-(z1-z0));
+        bot_t = (-y0 + z0)/((y1-y0)-(z1-z0));
+        near_t = (z0 - zmin)/-(z1-z0);
+        back_t = (-z0 - 1)/(z1-z0);
+        right_t = (x0 + z0)/(-(x1-x0)-(z1-z0));
+        top_t = (y0 + z0)/(-(y1-y0)-(z1-z0));
 
         if(out0 != 0) {
             select=0;
@@ -472,58 +547,65 @@ function clipLinePerspective(line, z_min) {
             out = out1;
         }
 
+        let loop = 0;
+
     //CLIPPING OUTCODE
         if(out >= 32){  //LEFT
             t = left_t;
             x = (1-t)*x0 + (t*x1);
             y = (1-t)*y0 + (t*y1);
             z = (1-t)*z0 + (t*z1);
-            out = out - 32;
+            //out = out - 32;
         }else if(out >= 16){  //RIGHT
             t = right_t;
             x = (1-t)*x0 + (t*x1);
             y = (1-t)*y0 + (t*y1);
             z = (1-t)*z0 + (t*z1);
-            out = out - 16;
-        }else if(out >= 8){   //TOP
-            t = top_t;
-            x = (1-t)*x0 + (t*x1);
-            y = (1-t)*y0 + (t*y1);
-            z = (1-t)*z0 + (t*z1);
-            out = out - 8;
-        }else if(out >= 4){   //BOTTOM
+            //out = out - 16;
+        }else if(out >= 8){   //Bottom
             t = bot_t;
             x = (1-t)*x0 + (t*x1);
             y = (1-t)*y0 + (t*y1);
             z = (1-t)*z0 + (t*z1);
-            out = out - 4;
+            //out = out - 8;
+        }else if(out >= 4){   //Top
+            t = top_t;
+            x = (1-t)*x0 + (t*x1);
+            y = (1-t)*y0 + (t*y1);
+            z = (1-t)*z0 + (t*z1);
+            //out = out - 4;
         } else if(out >= 2){   //FAR
             t = back_t;
             x = (1-t)*x0 + (t*x1);
             y = (1-t)*y0 + (t*y1);
             z = (1-t)*z0 + (t*z1);
-            out = out - 2;
+            //out = out - 2;
         } else if(out >= 1){    //NEAR
             t = near_t;
             x = (1-t)*x0 + (t*x1);
             y = (1-t)*y0 + (t*y1);
             z = (1-t)*z0 + (t*z1);
-            out = out - 1;
+            //out = out - 1;
         }
 
         if(select ==0) {
-        line.pt0 = Vector4(x,y,z,1);    //create new clipped vector point
-        out0 = out;
-        x0 = x;
-        y0 = y;
-        z0 = z;
+            line.pt0 = Vector4(x,y,z,1);    //create new clipped vector point
+            x0 = x;
+            y0 = y;
+            z0 = z;
+            out0 = outcodePerspective(line.pt0, z_min);
         } else {
-        line.pt1 = Vector4(x,y,z,1);    //create new clipped vector point
-        x1 = x;
-        y1 = y;
-        z1 = z;
-        out1 = out;
+            line.pt1 = Vector4(x,y,z,1);    //create new clipped vector point
+            x1 = x;
+            y1 = y;
+            z1 = z;
+            out1 = outcodePerspective(line.pt1, z_min);
         }
+
+        if(loop == 8) {
+            return null;
+        }
+        loop++;
     }
 }
 
@@ -553,8 +635,8 @@ function onKeyDown(event) {
             newSRP = Vector4(scene.view.prp.x, scene.view.prp.y, scene.view.prp.z, 1);
             newPRP = Vector4(scene.view.prp.x, scene.view.prp.y, scene.view.prp.z, 1);
             
-            console.log("PRP: "+scene.view.prp.x);
-            scene.view.prp.x = scene.view.prp.x + 1;
+            //console.log("PRP: "+scene.view.prp.x);
+            //scene.view.prp.x = scene.view.prp.x + 1;
             //rotate the camera for every left click
 
             // newSRP = Mat4x4RotateY(newSRP, radian);
@@ -600,10 +682,16 @@ function drawLine(x1, y1, x2, y2) {
 }
 
 function drawCube(model){
+    if (model.hasOwnProperty(vertices) && model.hasOwnProperty(edges)) {
+        return model;
+    }
+    //let type = model.type;
     let center = model.center;
     let height = model.height;
     let width = model.width;
     let depth = model.depth;
+    //let vertices = [];
+    //let edges =[];
 
     model.vertices.push(Vector4(center.x-(width/2), center.y+(height/2), center.z-(depth/2), 1));  //front top left");
     model.vertices.push(Vector4(center.x+(width/2), center.y+(height/2), center.z-(depth/2), 1));  //front top right
@@ -620,7 +708,9 @@ function drawCube(model){
     model.edges.push([1, 5]);
     model.edges.push([2, 6]);
     model.edges.push([3, 7]);
-    return model;
+
+    let newModel = {type: type, center: center, height: height, width: width, depth: depth, vertices: vertices, edges: edges};
+    return newModel;
 }
 
 function drawCone(model){
